@@ -8,7 +8,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-image: url('chicity.png');
+            background-image: url('carteflou.jpeg');
             background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
@@ -16,6 +16,8 @@
         }
         .clickable-zone {
             position: fixed;
+            top: 20px;
+            left: 30%;
             width: 50px;
             height: 50px;
             background-color: transparent;
@@ -25,77 +27,33 @@
         .clickable-zone:hover {
             background-color: transparent;
         }
-        .zone-1 {
-            top: 20px;   
-            left: 30px; 
-        }
-
-        .zone-2 {
-            top: 30px;
-            left: 40%;
-        }
-
-        .zone-3 {
-            top: 500px;
-            left: 20%;
-        }
-        .video-container {
-            display: none;
+        .clickable-zone2 {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            width: 320px;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            z-index: 1000;
-        }
-
-        .video-container.active {
-            display: block;
-        }
-
-        .video-container video {
-            width: 100%;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 24px;
-            height: 24px;
+            top: 90px;
+            left: 30%;
+            width: 50px;
+            height: 50px;
+            background-color: transparent;
             border: none;
-            border-radius: 50%;
             cursor: pointer;
-            font-weight: bold;
         }
-
-        body.debug .clickable-zone {
-            background: rgba(255, 0, 0, 0.25);
-            outline: 2px dashed red;
+        .clickable-zone2:hover {
+            background-color: transparent;
         }
-    </style>
-</head>
-
-<body class="debug">
-
-    <div class="clickable-zone zone-1" onclick="showVideo('video1')"></div>
-    <div class="clickable-zone zone-2" onclick="showVideo('video2')"></div>
-    <div class="clickable-zone zone-3" onclick="openAffiliate('link1')"></div>
-
-    <div class="video-container" id="videoContainer">
-        <button class="close-btn" onclick="closeVideo()">×</button>
-        <video id="videoPlayer" controls muted></video>
-    </div>
-
-    <script>
-
-        const videos = {
-            video1: "video1.mp4",  // remplace par ton fichier
-            video2: "video2.mp4"
-        };
-
+        /* pour modifier la position top et left s*/
+        .clickable-zone3 {
+            position: fixed;
+            top: 160px;  /* wazai ajuste la position verticale */
+            left: 30%;   /* ajuste la position horizontale */
+            width: 50px;
+            height: 50px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .clickable-zone3:hover {
+            background-color: transparent;
+        }
         .video-container {
             display: none;
             position: fixed;
@@ -107,17 +65,58 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             overflow: hidden;
         }
+        .video-container2 {
+            display: none;
+            position: fixed;
+            top: 250px;
+            left: 30px;
+            width: 320px;
+            background-color: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        /* modifie la position top */
+        .video-container3 {
+            display: none;
+            position: fixed;
+            top: 480px;  /* Ajuste la position verticale */
+            left: 30px;
+            width: 320px;
+            background-color: #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
         .video-container.active {
+            display: block;
+        }
+        .video-container2.active {
+            display: block;
+        }
+        .video-container3.active {
             display: block;
         }
         .video-container video {
             width: 100%;
             display: block;
         }
-        .video-container video::-webkit-media-controls-mute-button {
+        .video-container2 video {
+            width: 100%;
+            display: block;
+        }
+        .video-container3 video {
+            width: 100%;
+            display: block;
+        }
+        .video-container video::-webkit-media-controls-mute-button,
+        .video-container2 video::-webkit-media-controls-mute-button,
+        .video-container3 video::-webkit-media-controls-mute-button {
             display: none;
         }
-        .video-container video::-webkit-media-controls-volume-slider {
+        .video-container video::-webkit-media-controls-volume-slider,
+        .video-container2 video::-webkit-media-controls-volume-slider,
+        .video-container3 video::-webkit-media-controls-volume-slider {
             display: none;
         }
         .close-btn {
@@ -177,11 +176,31 @@
 </head>
 <body>
     <div class="clickable-zone" onclick="showVideo()"></div>
+    <div class="clickable-zone2" onclick="showVideo2()"></div>
+    <!-- zone cliquable video 3 - modifier la fonction onclick if needed -->
+    <div class="clickable-zone3" onclick="showVideo3()"></div>
     
     <div class="video-container" id="videoContainer">
         <button class="close-btn" onclick="closeVideo()">×</button>
         <video id="videoPlayer" controls muted>
-            <source src="CAM_20260114085243_0003_D.mp4" type="video/mp4">
+            <source src="camera.mp4" type="video/mp4">
+            
+        </video>
+    </div>
+    
+    <div class="video-container2" id="videoContainer2">
+        <button class="close-btn" onclick="closeVideo2()">×</button>
+        <video id="videoPlayer2" controls muted>
+            <source src="cam2v.mp4" type="video/mp4">
+            
+        </video>
+    </div>
+    
+    <!-- Conteneur vidéo 3 - Remplace 'wsh.mp4' par le nom de la vidéo mon salaud -->
+    <div class="video-container3" id="videoContainer3">
+        <button class="close-btn" onclick="closeVideo3()">×</button>
+        <video id="videoPlayer3" controls muted>
+            <source src="wsh.mp4" type="video/mp4">
             
         </video>
     </div>
@@ -224,6 +243,39 @@
             video.currentTime = 0;
         }
         
+        function showVideo2() {
+            const container = document.getElementById('videoContainer2');
+            const video = document.getElementById('videoPlayer2');
+            video.muted = true;
+            container.classList.add('active');
+            video.play();
+        }
+        
+        function closeVideo2() {
+            const container = document.getElementById('videoContainer2');
+            const video = document.getElementById('videoPlayer2');
+            container.classList.remove('active');
+            video.pause();
+            video.currentTime = 0;
+        }
+        
+        // la Fonction  pour la vidéo 3
+        function showVideo3() {
+            const container = document.getElementById('videoContainer3');
+            const video = document.getElementById('videoPlayer3');
+            video.muted = true;
+            container.classList.add('active');
+            video.play();
+        }
+        
+        function closeVideo3() {
+            const container = document.getElementById('videoContainer3');
+            const video = document.getElementById('videoPlayer3');
+            container.classList.remove('active');
+            video.pause();
+            video.currentTime = 0;
+        }
+        
         function toggleSwitch() {
             const toggle = document.getElementById('toggle');
             toggle.classList.toggle('active');
@@ -231,8 +283,6 @@
     </script>
 </body>
 </html>
-
-
 
 
 
