@@ -128,14 +128,12 @@
     </style>
 </head>
 <body>
-    <!-- Si vous avez déjà placé manuellement la première zone clickable,
-         placez-la ici dans #clickZonesRoot (par ex. une div.clickable-zone
-         avec style inline top/left). Le script détectera et n'écrasera pas sa position. -->
-    <div id="clickZonesRoot">
-        <!-- Exemple (si vous voulez placer la première à la main avant chargement) :
-        <div class="clickable-zone" style="top:120px;left:40px;">1</div>
-        -->
-    </div>
+    <!-- Si tu as déjà placé manuellement la première zone clickable,
+         mets-la dans #clickZonesRoot et ajoute data-base="true" ou laisse la première .clickable-zone.
+         Exemple :
+         <div class="clickable-zone" data-base="true" style="top:120px;left:40px;">1</div>
+    -->
+    <div id="clickZonesRoot"></div>
     <div id="videoContainersRoot"></div>
 
     <div class="toggle-container">
@@ -145,8 +143,7 @@
     </div>
 
     <script>
-        // Les vidéos (chemins tels que fournis). Les noms avec espaces/parenthèses/virgules
-        // seront encodés automatiquement pour éviter les problèmes d'URL.
+        // vidéos — chemins fournis
         const videoFiles = [
             'projetmanif/CAM_20260114085243_0003_D.mp4',
             'projetmanif/CAM_20260114085533_0004_D.mp4',
@@ -166,6 +163,11 @@
         const clickZonesRoot = document.getElementById('clickZonesRoot');
         const videoContainersRoot = document.getElementById('videoContainersRoot');
 
+        // encode each path segment (keeps '/' intact but encodes spaces, commas, parentheses, etc.)
+        function encodePath(path) {
+            return path.split('/').map(encodeURIComponent).join('/');
+        }
+
         function createVideoContainer(index, topPx, leftPx) {
             const vc = document.createElement('div');
             vc.className = 'video-container';
@@ -173,14 +175,12 @@
             vc.style.top = topPx + 'px';
             vc.style.left = leftPx + 'px';
 
-            // close button
             const closeBtn = document.createElement('button');
             closeBtn.className = 'close-btn';
             closeBtn.innerHTML = '×';
             closeBtn.addEventListener('click', () => closeVideo(index));
             vc.appendChild(closeBtn);
 
-            // video element
             const video = document.createElement('video');
             video.id = `videoPlayer-${index}`;
             video.controls = true;
@@ -189,42 +189,43 @@
             video.playsInline = true;
             video.setAttribute('playsinline', '');
 
-            // create source element (encoded)
-            const encoded = encodeURI(videoFiles[index]);
-            const srcEl = document.createElement('source');
-            srcEl.src = encoded;
-            srcEl.type = 'video/mp4';
-            video.appendChild(srcEl);
+            // create source element with properly encoded path
+            const encoded = encodePath(videoFiles[index]);
+            const source = document.createElement('source');
+            source.src = encoded;
+            source.type = 'video/mp4';
+            video.appendChild(source);
 
-            // small overlay for errors/details
+            // overlay to show errors / messages
             const err = document.createElement('div');
             err.className = 'video-error';
             err.textContent = 'Impossible de charger la vidéo (vérifiez le chemin / nom du fichier).';
             vc.appendChild(err);
 
-            // video error handling
+            // error handling
             video.addEventListener('error', (ev) => {
                 err.classList.add('visible');
                 const code = video.error ? video.error.code : 'unknown';
                 console.warn(`Erreur lecture vidéo index=${index} src=${encoded} code=${code}`, ev);
-                // attempt a HEAD request for more info (ignore CORS/other failures)
+
+                // try a HEAD request to get status (can fail due to CORS, ignore errors)
                 fetch(encoded, { method: 'HEAD' }).then(response => {
                     if (!response.ok) {
                         console.warn(`HEAD ${encoded} -> status ${response.status}`);
-                        err.textContent = `Erreur ${response.status}: le fichier n'a pas été trouvé ou inaccessible (${encoded}).`;
+                        err.textContent = `Erreur ${response.status}: fichier introuvable ou inaccessible (${encoded}).`;
                     } else {
                         console.warn(`HEAD ${encoded} -> ok`);
-                        err.textContent = `La vidéo existe mais ne peut pas être lue par le navigateur (format/CORS/autoplay).`;
+                        err.textContent = `Fichier trouvé mais lecture impossible (format/CORS/autoplay).`;
                     }
-                }).catch((fetchErr) => {
+                }).catch(fetchErr => {
                     console.warn('HEAD fetch failed (CORS/Network) for', encoded, fetchErr);
-                    // message already set; don't overwrite with technical error
+                    // leave the generic message
                 });
             });
 
             video.addEventListener('loadedmetadata', () => {
                 err.classList.remove('visible');
-                console.info(`loadedmetadata index=${index} src=${encoded}`);
+                console.info(`loadedmetadata index=${index} src=${source.src}`);
             });
 
             vc.appendChild(video);
@@ -232,64 +233,85 @@
         }
 
         function createUI() {
-            // paramètres d'espacement si aucune première zone manuelle
             const verticalStep = 70;
             const horizontalStep = 90;
             const containerOffsetX = 60;
 
-            // detecte une zone déjà placée manuellement dans #clickZonesRoot
-            const preexisting = clickZonesRoot.querySelector('.clickable-zone');
+            // detect base zone: either element with data-base="true" or the first .clickable-zone in root
+            let baseEl = clickZonesRoot.querySelector('.clickable-zone[data-base="true"]') || clickZonesRoot.querySelector('.clickable-zone');
 
-            let baseTop, baseLeft;
-            let startIndex = 0;
+            let baseTop = 40;
+            let baseLeft = 40;
+            let haveBaseElement = false;
 
-            if (preexisting) {
-                // use its actual position as base for the diagonal
-                const rect = preexisting.getBoundingClientRect();
-                baseTop = rect.top;
-                baseLeft = rect.left;
-
-                // ensure it's index 0
-                preexisting.dataset.index = 0;
-                preexisting.textContent = '1';
-                preexisting.title = `Ouvrir la vidéo 1`;
-                preexisting.addEventListener('click', () => showVideo(0));
-                // create container for index 0 near that zone
-                createVideoContainer(0, baseTop, baseLeft + containerOffsetX);
-                startIndex = 1;
-            } else {
-                baseTop = 40;
-                baseLeft = 40;
-                startIndex = 0;
+            if (baseEl) {
+                // try to use inline style top/left if present, else getBoundingClientRect
+                const styleTop = baseEl.style.top;
+                const styleLeft = baseEl.style.left;
+                if (styleTop && styleLeft) {
+                    // parse px values
+                    const t = parseFloat(styleTop);
+                    const l = parseFloat(styleLeft);
+                    if (!isNaN(t) && !isNaN(l)) {
+                        baseTop = t;
+                        baseLeft = l;
+                    } else {
+                        const rect = baseEl.getBoundingClientRect();
+                        baseTop = rect.top;
+                        baseLeft = rect.left;
+                    }
+                } else {
+                    const rect = baseEl.getBoundingClientRect();
+                    baseTop = rect.top;
+                    baseLeft = rect.left;
+                }
+                haveBaseElement = true;
             }
 
-            // Always create exactly videoFiles.length zones (0..n-1).
-            // If preexisting was present, we skip creating index 0 zone to avoid duplicate.
-            for (let index = startIndex; index < videoFiles.length; index++) {
+            // Create exactly videoFiles.length zones and containers.
+            // If there was a base element, use it as index 0 (do not duplicate).
+            for (let index = 0; index < videoFiles.length; index++) {
                 const top = baseTop + index * verticalStep;
                 const left = baseLeft + index * horizontalStep;
 
-                const zone = document.createElement('div');
-                zone.className = 'clickable-zone';
-                zone.style.top = top + 'px';
-                zone.style.left = left + 'px';
-                zone.dataset.index = index;
-                zone.title = `Ouvrir la vidéo ${index + 1}`;
-                zone.textContent = index + 1;
-                zone.addEventListener('click', () => showVideo(index));
-                clickZonesRoot.appendChild(zone);
+                if (index === 0 && haveBaseElement) {
+                    // reuse baseEl as zone 0
+                    const zone = baseEl;
+                    zone.dataset.index = 0;
+                    zone.title = `Ouvrir la vidéo 1`;
+                    zone.textContent = '1';
+                    // ensure it has inline top/left to stay put
+                    zone.style.top = top + 'px';
+                    zone.style.left = left + 'px';
+                    zone.addEventListener('click', () => showVideo(0));
+                } else {
+                    // create a new zone
+                    const zone = document.createElement('div');
+                    zone.className = 'clickable-zone';
+                    zone.style.top = top + 'px';
+                    zone.style.left = left + 'px';
+                    zone.dataset.index = index;
+                    zone.title = `Ouvrir la vidéo ${index + 1}`;
+                    zone.textContent = index + 1;
+                    zone.addEventListener('click', () => showVideo(index));
+                    clickZonesRoot.appendChild(zone);
+                }
 
+                // create corresponding video container
                 createVideoContainer(index, top, left + containerOffsetX);
             }
 
-            // DEBUG: log how many zones/containers were created
+            // debug log: verify counts
             console.info(`createUI: zones=${document.querySelectorAll('.clickable-zone').length}, containers=${document.querySelectorAll('.video-container').length}`);
         }
 
         function showVideo(index) {
             const container = document.getElementById(`videoContainer-${index}`);
             const video = document.getElementById(`videoPlayer-${index}`);
-            if (!container || !video) return;
+            if (!container || !video) {
+                console.warn('showVideo: container or video missing for index', index);
+                return;
+            }
 
             // close other containers and stop their videos
             document.querySelectorAll('.video-container.active').forEach(vc => {
@@ -303,33 +325,26 @@
 
             container.classList.add('active');
 
-            // keep toggle behaviour intact
+            // toggle behaviour: if toggle active -> unmute, else mute
             const toggleActive = document.getElementById('toggle')?.classList.contains('active');
             video.muted = !toggleActive;
 
-            // try to (re)load the source and play
+            // ensure source is set (in case browser discarded it)
             const sourceEl = video.querySelector('source');
             if (sourceEl) {
-                const encoded = sourceEl.src || encodeURI(videoFiles[index]);
-                sourceEl.src = encoded;
-                try {
-                    // try HEAD to detect missing file early (may fail due to CORS)
-                    fetch(encoded, { method: 'HEAD' }).then(resp => {
-                        if (!resp.ok) {
-                            console.warn(`HEAD check failed for ${encoded}: ${resp.status}`);
-                        }
-                    }).catch(() => {/* ignore network/CORS */});
-                } catch (e) { /* ignore */ }
-
-                video.load();
+                const encoded = encodePath(videoFiles[index]);
+                if (sourceEl.src !== encoded) {
+                    sourceEl.src = encoded;
+                }
+                try { video.load(); } catch (e) { console.warn('video.load() failed', e); }
             } else {
-                // fallback: set video.src directly
-                video.src = encodeURI(videoFiles[index]);
-                video.load();
+                video.src = encodePath(videoFiles[index]);
+                try { video.load(); } catch (e) { console.warn('video.load() failed', e); }
             }
 
+            // attempt to play; may fail due to autoplay policies but controls are available
             video.play().catch(err => {
-                console.warn('play() failed (user gesture/autoplay policy):', err);
+                console.warn('play() failed (user gesture/autoplay):', err);
             });
         }
 
@@ -347,15 +362,13 @@
         function toggleSwitch() {
             const toggle = document.getElementById('toggle');
             toggle.classList.toggle('active');
-
-            // comportement inchangé : quand actif -> unmute, sinon -> mute
             const shouldUnmute = toggle.classList.contains('active');
             document.querySelectorAll('.video-container video').forEach(video => {
                 video.muted = !shouldUnmute;
             });
         }
 
-        // initialize UI
+        // init
         createUI();
 
         // Accessibility: close opened video when Escape is pressed
