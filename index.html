@@ -15,17 +15,28 @@
             background-attachment: fixed;
         }
 
-        /* shared clickable zone style; position will be set inline for each */
+        /* clickable zones: vivid blue so you can see & move them */
         .clickable-zone {
             position: fixed;
             width: 50px;
             height: 50px;
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            z-index: 20;
+            background-color: rgba(0, 122, 255, 0.95); /* vivid blue */
+            border: 2px solid #ffffffcc;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            cursor: grab;
+            z-index: 60;
+            touch-action: none; /* allow touch dragging */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
         }
-        .clickable-zone:hover { background-color: rgba(255,255,255,0.03); }
+        .clickable-zone.dragging { cursor: grabbing; opacity: .95; transform: scale(1.03); }
+
+        .clickable-zone:hover { filter: brightness(1.05); }
 
         /* shared video container */
         .video-container {
@@ -36,14 +47,30 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
             overflow: hidden;
-            z-index: 30;
+            z-index: 50;
         }
         .video-container.active { display: block; }
 
         .video-container video {
             width: 100%;
             display: block;
+            background: #000;
         }
+
+        .video-error {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            background: rgba(0,0,0,0.7);
+            z-index: 55;
+            font-size: 14px;
+            padding: 8px;
+            text-align: center;
+        }
+        .video-error.visible { display: flex; }
 
         .close-btn {
             position: absolute;
@@ -60,7 +87,7 @@
             font-weight: bold;
             line-height: 25px;
             text-align: center;
-            z-index: 40;
+            z-index: 60;
         }
         .close-btn:hover { background-color: #fff; }
 
@@ -71,7 +98,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            z-index: 50;
+            z-index: 70;
         }
         .toggle-switch {
             position: relative;
@@ -95,7 +122,7 @@
         }
         .toggle-switch.active .toggle-slider { transform: translateX(26px); }
 
-        /* small screens: scale down margins */
+        /* small screens: scale down */
         @media (max-width: 600px) {
             .video-container { width: 280px; left: 12px; }
             .clickable-zone { width: 44px; height: 44px; }
@@ -104,12 +131,11 @@
 </head>
 <body>
     <!-- Si vous avez déjà placé manuellement la première zone clickable,
-         placez-la ici à l'intérieur du div #clickZonesRoot (par ex. une div.clickable-zone
-         avec des styles inline top/left). Le script ci‑dessous détecte cette première zone
-         et positionne les autres en diagonale par rapport à elle. -->
+         placez-la ici dans #clickZonesRoot (par ex. une div.clickable-zone
+         avec style inline top/left). Le script détectera et n'écrasera pas sa position. -->
     <div id="clickZonesRoot">
-        <!-- Exemple (si vous l'avez déjà mise dans le HTML) :
-        <div class="clickable-zone" style="top:120px;left:40px;"></div>
+        <!-- Exemple (si vous voulez placer la première à la main avant chargement) :
+        <div class="clickable-zone" style="top:120px;left:40px;">1</div>
         -->
     </div>
     <div id="videoContainersRoot"></div>
@@ -121,10 +147,8 @@
     </div>
 
     <script>
-        /*
-         * Les 13 vidéos (dans l'ordre fourni) — placées dans le dossier "projetmanif/".
-         * Si les fichiers sont ailleurs, ajustez le chemin.
-         */
+        // Les vidéos (chemins tels que fournis). Les noms avec espaces/parenthèses/virgules
+        // seront encodés automatiquement pour éviter les problèmes d'URL.
         const videoFiles = [
             'projetmanif/CAM_20260114085243_0003_D.mp4',
             'projetmanif/CAM_20260114085533_0004_D.mp4',
@@ -144,58 +168,63 @@
         const clickZonesRoot = document.getElementById('clickZonesRoot');
         const videoContainersRoot = document.getElementById('videoContainersRoot');
 
-        function createUI() {
-            // paramètres d'espacement en diagonale
-            const verticalStep = 70;      // px vers le bas entre chaque zone
-            const horizontalStep = 90;    // px vers la droite entre chaque zone
-            const containerOffsetX = 60;  // distance à droite de la zone pour le conteneur vidéo
+        // Make an element draggable (pointer + touch)
+        function makeZoneDraggable(zone) {
+            let startX = 0, startY = 0, originLeft = 0, originTop = 0;
+            let dragging = false, moved = false;
 
-            // détecte s'il y a déjà une première zone (manuellement placée dans le HTML)
-            const preexisting = clickZonesRoot.querySelector('.clickable-zone');
+            const onPointerDown = (e) => {
+                e.preventDefault();
+                const p = getPointFromEvent(e);
+                startX = p.x;
+                startY = p.y;
+                const rect = zone.getBoundingClientRect();
+                originLeft = rect.left;
+                originTop = rect.top;
+                dragging = true;
+                moved = false;
+                zone.classList.add('dragging');
+                zone.setPointerCapture && zone.setPointerCapture(e.pointerId);
+            };
 
-            let baseTop, baseLeft;
-            let startIndex = 0;
+            const onPointerMove = (e) => {
+                if (!dragging) return;
+                const p = getPointFromEvent(e);
+                const dx = p.x - startX;
+                const dy = p.y - startY;
+                if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+                const newLeft = Math.max(0, originLeft + dx);
+                const newTop = Math.max(0, originTop + dy);
+                zone.style.left = newLeft + 'px';
+                zone.style.top = newTop + 'px';
+            };
 
-            if (preexisting) {
-                // si une zone existe déjà, on l'utilise comme base (index 0)
-                // on lit sa position à l'écran
-                const rect = preexisting.getBoundingClientRect();
-                baseTop = rect.top;
-                baseLeft = rect.left;
+            const onPointerUp = (e) => {
+                if (!dragging) return;
+                dragging = false;
+                zone.classList.remove('dragging');
+                try { zone.releasePointerCapture && zone.releasePointerCapture(e.pointerId); } catch (err){}
+                // if not moved (a real click), trigger opening
+                if (!moved) {
+                    const idx = parseInt(zone.dataset.index, 10);
+                    if (!Number.isNaN(idx)) showVideo(idx);
+                }
+            };
 
-                // marque-la comme index 0 et attache le handler si nécessaire
-                preexisting.dataset.index = 0;
-                preexisting.title = `Ouvrir la vidéo 1`;
-                preexisting.addEventListener('click', () => showVideo(0));
-                startIndex = 1;
-
-                // crée le conteneur vidéo pour l'index 0
-                createVideoContainer(0, baseTop, baseLeft + containerOffsetX);
-            } else {
-                // si aucune zone manuelle, on choisit une position de base par défaut
-                baseTop = 40;
-                baseLeft = 40;
-                startIndex = 0;
+            function getPointFromEvent(e) {
+                if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                return { x: e.clientX, y: e.clientY };
             }
 
-            // création des autres zones et containers en diagonale, en commençant à startIndex
-            for (let index = startIndex; index < videoFiles.length; index++) {
-                const top = baseTop + index * verticalStep;
-                const left = baseLeft + index * horizontalStep;
+            // Pointer events (preferred)
+            zone.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
 
-                // clickable zone
-                const zone = document.createElement('div');
-                zone.className = 'clickable-zone';
-                zone.style.top = top + 'px';
-                zone.style.left = left + 'px';
-                zone.title = `Ouvrir la vidéo ${index + 1}`;
-                zone.dataset.index = index;
-                zone.addEventListener('click', () => showVideo(index));
-                clickZonesRoot.appendChild(zone);
-
-                // conteneur vidéo correspondant (placé à droite de la zone)
-                createVideoContainer(index, top, left + containerOffsetX);
-            }
+            // Touch fallback (if pointer not supported)
+            zone.addEventListener('touchstart', onPointerDown, {passive:false});
+            window.addEventListener('touchmove', onPointerMove, {passive:false});
+            window.addEventListener('touchend', onPointerUp);
         }
 
         function createVideoContainer(index, topPx, leftPx) {
@@ -218,22 +247,91 @@
             video.controls = true;
             video.muted = true;
             video.preload = 'metadata';
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
 
-            const src = document.createElement('source');
-            src.src = videoFiles[index];
-            src.type = 'video/mp4';
+            // Use direct video.src with encodeURI to avoid issues with spaces/parentheses/commas
+            const encoded = encodeURI(videoFiles[index]);
+            video.src = encoded;
 
-            video.appendChild(src);
+            // small overlay for errors
+            const err = document.createElement('div');
+            err.className = 'video-error';
+            err.textContent = 'Impossible de charger la vidéo (vérifiez le chemin / nom du fichier).';
+            vc.appendChild(err);
+
+            // show error overlay if video fails to load
+            video.addEventListener('error', () => {
+                err.classList.add('visible');
+                console.warn('erreur chargement vidéo:', encoded);
+            });
+
+            // hide error when metadata loaded successfully
+            video.addEventListener('loadedmetadata', () => {
+                err.classList.remove('visible');
+            });
+
             vc.appendChild(video);
-
             videoContainersRoot.appendChild(vc);
+        }
+
+        function createUI() {
+            // paramètres d'espacement si aucune première zone manuelle
+            const verticalStep = 70;
+            const horizontalStep = 90;
+            const containerOffsetX = 60;
+
+            // detecte une zone déjà placée manuellement dans #clickZonesRoot
+            const preexisting = clickZonesRoot.querySelector('.clickable-zone');
+
+            let baseTop, baseLeft;
+            let startIndex = 0;
+
+            if (preexisting) {
+                const rect = preexisting.getBoundingClientRect();
+                baseTop = rect.top;
+                baseLeft = rect.left;
+
+                preexisting.dataset.index = 0;
+                preexisting.textContent = '1';
+                preexisting.title = `Ouvrir la vidéo 1`;
+                preexisting.addEventListener('click', () => showVideo(0));
+                makeZoneDraggable(preexisting);
+                // create video container for index 0
+                createVideoContainer(0, baseTop, baseLeft + containerOffsetX);
+                startIndex = 1;
+            } else {
+                baseTop = 40;
+                baseLeft = 40;
+                startIndex = 0;
+            }
+
+            // create remaining zones; each zone is placed diagonally (down-right)
+            for (let index = startIndex; index < videoFiles.length; index++) {
+                const top = baseTop + index * verticalStep;
+                const left = baseLeft + index * horizontalStep;
+
+                const zone = document.createElement('div');
+                zone.className = 'clickable-zone';
+                zone.style.top = top + 'px';
+                zone.style.left = left + 'px';
+                zone.dataset.index = index;
+                zone.title = `Ouvrir la vidéo ${index + 1}`;
+                zone.textContent = index + 1;
+                zone.addEventListener('click', () => showVideo(index));
+                clickZonesRoot.appendChild(zone);
+                makeZoneDraggable(zone);
+
+                createVideoContainer(index, top, left + containerOffsetX);
+            }
         }
 
         function showVideo(index) {
             const container = document.getElementById(`videoContainer-${index}`);
             const video = document.getElementById(`videoPlayer-${index}`);
             if (!container || !video) return;
-            // pause any other playing videos and close their containers
+
+            // close other containers and stop their videos
             document.querySelectorAll('.video-container.active').forEach(vc => {
                 const v = vc.querySelector('video');
                 if (v && v !== video) {
@@ -242,14 +340,22 @@
                 }
                 vc.classList.remove('active');
             });
+
             container.classList.add('active');
 
-            // garde le comportement du toggle intact : si toggle actif -> unmute, sinon mute
+            // keep toggle behaviour intact
             const toggleActive = document.getElementById('toggle')?.classList.contains('active');
             video.muted = !toggleActive;
 
+            // try to (re)load and play the video
+            // reload source in case the path was unavailable initially
+            const encoded = encodeURI(videoFiles[index]);
+            if (video.src !== encoded) video.src = encoded;
+            video.load();
+
+            // play if allowed; user click (or drag-less click) is a gesture so should allow
             video.play().catch(err => {
-                // ignorer les erreurs d'autoplay ; l'utilisateur peut appuyer sur play
+                // autoplay policy might prevent play; user can press play manually
                 console.warn('play() failed:', err);
             });
         }
@@ -269,17 +375,17 @@
             const toggle = document.getElementById('toggle');
             toggle.classList.toggle('active');
 
-            // comportement : quand actif -> dé-sourcer (unmute) toutes les vidéos visibles ; sinon -> mute toutes
+            // comportement inchangé : quand actif -> unmute, sinon -> mute
             const shouldUnmute = toggle.classList.contains('active');
             document.querySelectorAll('.video-container video').forEach(video => {
                 video.muted = !shouldUnmute;
             });
         }
 
-        // initialise l'UI
+        // initialize UI
         createUI();
 
-        // Accessibilité : fermer le conteneur actif quand on appuie sur Échap
+        // Accessibility: close opened video when Escape is pressed
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.video-container.active').forEach(vc => {
