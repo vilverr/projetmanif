@@ -125,6 +125,7 @@ html, body {
 <body>
 
 <!-- === MAP === -->
+<img id="map-image" src="chicity.png" alt="Carte">
 <div id="map-container">
     <img src="chicity.png" alt="Carte">
 
@@ -217,31 +218,41 @@ function toggleSwitch() {
 </script>
 
 <script>
-const img = document.getElementById('map-image');
+document.addEventListener('DOMContentLoaded', () => {
 
-img.addEventListener('click', e => {
-    const imgRect = img.getBoundingClientRect();
+    const img = document.getElementById('map-image');
+    if (!img) {
+        console.error('❌ image map-image introuvable');
+        return;
+    }
 
-    const x = e.clientX - imgRect.left;
-    const y = e.clientY - imgRect.top;
+    img.addEventListener('click', e => {
+        const imgRect = img.getBoundingClientRect();
 
-    const percentX = (x / imgRect.width * 100).toFixed(3);
-    const percentY = (y / imgRect.height * 100).toFixed(3);
+        const x = e.clientX - imgRect.left;
+        const y = e.clientY - imgRect.top;
 
-    console.clear();
-    console.log('📍 CLICK IMAGE (REPÈRE STABLE)');
-    console.log(`X : ${x.toFixed(1)}px | ${percentX}%`);
-    console.log(`Y : ${y.toFixed(1)}px | ${percentY}%`);
-    console.log('--- HTML À COPIER ---');
-    console.log(
-        `<div class="clickable-zone" data-top="${y.toFixed(1)}px" data-left="${percentX}%"></div>`
-    );
+        const percentX = (x / imgRect.width * 100).toFixed(3);
+        const percentY = (y / imgRect.height * 100).toFixed(3);
+
+        console.clear();
+        console.log('📍 CLICK IMAGE (REPÈRE STABLE)');
+        console.log(`X : ${x.toFixed(1)}px | ${percentX}%`);
+        console.log(`Y : ${y.toFixed(1)}px | ${percentY}%`);
+        console.log('--- HTML À COPIER ---');
+        console.log(
+            `<div class="clickable-zone" data-top="${y.toFixed(1)}px" data-left="${percentX}%"></div>`
+        );
+    });
+
 });
 </script>
 
 
+
 </body>
 </html>
+
 
 
 
