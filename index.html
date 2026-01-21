@@ -6,22 +6,26 @@
 <title>www.mediamanif.org</title>
 
 <style>
-body {
+html, body {
     margin: 0;
     padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
     background: #000;
 }
 
-/* === MAP === */
+/* === MAP FULLSCREEN === */
 #map-container {
     position: relative;
-    width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 100vw;
+    height: 100vh;
 }
 
 #map-container img {
     width: 100%;
+    height: 100%;
+    object-fit: contain;   /* garde le ratio */
     display: block;
 }
 
@@ -35,7 +39,7 @@ body {
     border-radius: 6px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     cursor: pointer;
-    z-index: 60;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -53,11 +57,9 @@ body {
     display: none;
     position: fixed;
     width: 320px;
-    background-color: #000;
+    background: #000;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    overflow: hidden;
-    z-index: 80;
+    z-index: 50;
 }
 
 .video-container.active {
@@ -121,7 +123,7 @@ body {
 
 <body>
 
-<!-- === MAP + ZONES === -->
+<!-- === MAP === -->
 <div id="map-container">
     <img src="chicity.png" alt="Carte">
 
@@ -141,14 +143,13 @@ body {
 
 <div id="videoContainersRoot"></div>
 
-<!-- === TOGGLE === -->
 <div class="toggle-container">
     <div class="toggle-switch" id="toggle" onclick="toggleSwitch()">
         <div class="toggle-slider"></div>
     </div>
 </div>
 
-<!-- === TOOL DE MESURE === -->
+<!-- === COORDINATE TOOL (FIABLE) === -->
 <script>
 const map = document.getElementById("map-container");
 
@@ -158,12 +159,12 @@ map.addEventListener("click", e => {
     const y = e.clientY - rect.top;
 
     console.log(
-      `data-top="${Math.round(y)}px" data-left="${(x / rect.width * 100).toFixed(2)}%"`
+        `data-top="${Math.round(y)}px" data-left="${(x / rect.width * 100).toFixed(2)}%"`
     );
 });
 </script>
 
-<!-- === VIDEO LOGIC (INCHANGÉE) === -->
+<!-- === VIDEO LOGIC === -->
 <script>
 const BASE = 'https://vilverr.github.io/projetmanif/';
 const videoFiles = [
@@ -181,21 +182,14 @@ const videoFiles = [
     BASE + 'CAM_20260114100025_0019_D.mp4'
 ];
 
-const videoRoot = document.getElementById('videoContainersRoot');
-
 document.querySelectorAll('.clickable-zone').forEach(zone => {
     zone.style.top = zone.dataset.top;
     zone.style.left = zone.dataset.left;
-
-    zone.addEventListener('click', () => {
-        const index = zone.dataset.index;
-        showVideo(index);
-    });
+    zone.addEventListener('click', () => showVideo(zone.dataset.index));
 });
 
 function showVideo(index) {
     let vc = document.getElementById('video-' + index);
-
     if (!vc) {
         vc = document.createElement('div');
         vc.className = 'video-container';
@@ -205,9 +199,8 @@ function showVideo(index) {
             <video controls muted>
                 <source src="${videoFiles[index]}" type="video/mp4">
             </video>`;
-        videoRoot.appendChild(vc);
+        document.body.appendChild(vc);
     }
-
     document.querySelectorAll('.video-container').forEach(v => v.classList.remove('active'));
     vc.classList.add('active');
 }
