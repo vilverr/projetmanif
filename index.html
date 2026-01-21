@@ -216,26 +216,28 @@ function toggleSwitch() {
 }
 </script>
 
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    const img = document.getElementById('map-image');
+    const container = document.getElementById('map-container');
+    const img = container?.querySelector('img');
+
     if (!img) {
-        console.error('❌ image map-image introuvable');
+        console.error('❌ image de la carte introuvable');
         return;
     }
 
     img.addEventListener('click', e => {
-        const imgRect = img.getBoundingClientRect();
+        const rect = img.getBoundingClientRect();
 
-        const x = e.clientX - imgRect.left;
-        const y = e.clientY - imgRect.top;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-        const percentX = (x / imgRect.width * 100).toFixed(3);
-        const percentY = (y / imgRect.height * 100).toFixed(3);
+        const percentX = (x / rect.width * 100).toFixed(3);
+        const percentY = (y / rect.height * 100).toFixed(3);
 
         console.clear();
-        console.log('📍 CLICK IMAGE (REPÈRE STABLE)');
+        console.log('📍 CLICK IMAGE (REPÈRE IMAGE STABLE)');
         console.log(`X : ${x.toFixed(1)}px | ${percentX}%`);
         console.log(`Y : ${y.toFixed(1)}px | ${percentY}%`);
         console.log('--- HTML À COPIER ---');
@@ -249,8 +251,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
 </body>
 </html>
+
 
 
 
