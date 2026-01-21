@@ -216,33 +216,58 @@ function toggleSwitch() {
 }
 </script>
 
-    <script>
+  <script>
 document.addEventListener('DOMContentLoaded', () => {
 
     const container = document.getElementById('map-container');
     const img = container?.querySelector('img');
 
     if (!img) {
-        console.error('❌ image de la carte introuvable');
+        console.error('❌ image introuvable');
         return;
     }
 
     img.addEventListener('click', e => {
-        const rect = img.getBoundingClientRect();
 
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const containerRect = container.getBoundingClientRect();
+        const imgRect = img.getBoundingClientRect();
 
-        const percentX = (x / rect.width * 100).toFixed(3);
-        const percentY = (y / rect.height * 100).toFixed(3);
+        // Dimensions naturelles de l'image
+        const naturalRatio = img.naturalWidth / img.naturalHeight;
+        const containerRatio = containerRect.width / containerRect.height;
+
+        let realWidth, realHeight, offsetX, offsetY;
+
+        if (containerRatio > naturalRatio) {
+            // bandes verticales (gauche / droite)
+            realHeight = containerRect.height;
+            realWidth = realHeight * naturalRatio;
+            offsetX = (containerRect.width - realWidth) / 2;
+            offsetY = 0;
+        } else {
+            // bandes horizontales (haut / bas)
+            realWidth = containerRect.width;
+            realHeight = realWidth / naturalRatio;
+            offsetX = 0;
+            offsetY = (containerRect.height - realHeight) / 2;
+        }
+
+        const x = e.clientX - containerRect.left - offsetX;
+        const y = e.clientY - containerRect.top - offsetY;
+
+        // Sécurité : clic hors image réelle
+        if (x < 0 || y < 0 || x > realWidth || y > realHeight) return;
+
+        const percentX = (x / realWidth * 100).toFixed(3);
+        const pixelY = y.toFixed(1);
 
         console.clear();
-        console.log('📍 CLICK IMAGE (REPÈRE IMAGE STABLE)');
-        console.log(`X : ${x.toFixed(1)}px | ${percentX}%`);
-        console.log(`Y : ${y.toFixed(1)}px | ${percentY}%`);
+        console.log('📍 CLICK IMAGE (CORRIGÉ CONTAIN)');
+        console.log(`X réel : ${x.toFixed(1)}px | ${percentX}%`);
+        console.log(`Y réel : ${pixelY}px`);
         console.log('--- HTML À COPIER ---');
         console.log(
-            `<div class="clickable-zone" data-top="${y.toFixed(1)}px" data-left="${percentX}%"></div>`
+            `<div class="clickable-zone" data-top="${pixelY}px" data-left="${percentX}%"></div>`
         );
     });
 
@@ -252,8 +277,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
 </body>
 </html>
+
 
 
 
