@@ -134,6 +134,10 @@
       Si tu laisses data-top/data-left vides, le script createUI calculera la position automatiquement.
       IMPORTANT : data-index doit correspondre à l'index dans videoFiles (0 = première vidéo).
     -->
+<div id="map-container" style="position: relative;">
+  <img src="carte.png" style="width:100%; display:block;">
+</div>
+    
     <div id="clickZonesRoot">
       <div class="clickable-zone" data-index="0" data-top="90px"  data-left="41%">1</div>
       <div class="clickable-zone" data-index="1" data-top="95px"  data-left="44%">2</div>
@@ -157,6 +161,22 @@
             <div class="toggle-slider"></div>
         </div>
     </div>
+
+    <script>
+const map = document.getElementById("map-container");
+
+map.addEventListener("click", function (e) {
+  const rect = map.getBoundingClientRect();
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const xPercent = (x / rect.width * 100).toFixed(2);
+  const yPx = Math.round(y);
+
+  console.log(`data-top="${yPx}px" data-left="${xPercent}%"`);
+});
+</script>
 
     <script>
         // base URL for files hosted on GitHub Pages for this repo
@@ -424,6 +444,7 @@
     </script>
 </body>
 </html>
+
 
 
 
