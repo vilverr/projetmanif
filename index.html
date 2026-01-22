@@ -147,10 +147,9 @@ html, body {
     display: flex;
 }
 
-.fullscreen-video video {
+.fullscreen-video iframe {
     width: 100%;
     height: 100%;
-    object-fit: contain;
 }
 
 .fullscreen-video .close-btn {
@@ -195,12 +194,18 @@ html, body {
     </div>
 </div>
 
-<!-- === GROSSE VIDEO FULLSCREEN === -->
+<!-- === GROSSE VIDEO FULLSCREEN (YouTube) === -->
 <div class="fullscreen-video" id="fullscreenVideo">
     <button class="close-btn" onclick="closeFullscreenVideo()">×</button>
-    <video id="fullscreenPlayer" controls autoplay muted>
-        <source src="https://www.dropbox.com/scl/fi/5t2xtj7abs2y688u4ealj/Mediamanif.mp4?raw=1" type="video/mp4">
-    </video>
+    <iframe id="fullscreenPlayer" 
+        width="100%" 
+        height="100%" 
+        src="https://www.youtube.com/embed/dln5CZIMWgY?autoplay=1&controls=1" 
+        title="Video" 
+        frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowfullscreen>
+    </iframe>
 </div>
 
 <script>
@@ -305,29 +310,24 @@ function closeVideo(index) {
 function toggleSwitch() {
     const toggle = document.getElementById('toggle');
     const fullscreenVideo = document.getElementById('fullscreenVideo');
-    const video = document.getElementById('fullscreenPlayer');
     
     toggle.classList.toggle('active');
     
     if (toggle.classList.contains('active')) {
         fullscreenVideo.classList.add('active');
-        video.play();
+        // La vidéo YouTube autoplay gère le démarrage
     } else {
         fullscreenVideo.classList.remove('active');
-        video.pause();
-        video.currentTime = 0;
+        // YouTube s'arrête automatiquement à la fermeture
     }
 }
 
 function closeFullscreenVideo() {
     const toggle = document.getElementById('toggle');
     const fullscreenVideo = document.getElementById('fullscreenVideo');
-    const video = document.getElementById('fullscreenPlayer');
     
     toggle.classList.remove('active');
     fullscreenVideo.classList.remove('active');
-    video.pause();
-    video.currentTime = 0;
 }
 </script>
 
